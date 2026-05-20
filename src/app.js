@@ -42,6 +42,9 @@ app.get("/", (req, res) => {
   });
 });
 
+// Mount Routes
+app.use("/api/auth", require("./routes/auth/authRoutes"));
+
 // Central Error Handler
 app.use(errorHandler);
 

@@ -33,8 +33,8 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "manager", "member"],
-      default: "member",
+      enum: ["admin", "manager", "employee"],
+      default: "employee",
     },
     isActive: {
       type: Boolean,
@@ -60,16 +60,16 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Sign JWT and return
+// Sign JWT and return (15 minutes expiration)
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
     { id: this._id, tenantId: this.tenantId, role: this.role },
     process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    { expiresIn: "15m" }
   );
 };
 
-// Sign Refresh JWT and return
+// Sign Refresh JWT and return (7 days expiration)
 UserSchema.methods.getSignedRefreshJwtToken = function () {
   return jwt.sign(
     { id: this._id, tenantId: this.tenantId },
