@@ -4,6 +4,7 @@ const User = require("../models/User");
 const UserSession = require("../models/UserSession");
 const { runInContext } = require("../utils/tenantContext");
 const { createUserSession } = require("../utils/sessionHelper");
+const organizationValidationService = require("../services/organization/organizationValidationService");
 
 class OrganizationController {
   /**
@@ -176,6 +177,24 @@ class OrganizationController {
         success: true,
         message: "Organization settings updated successfully",
         data: organization,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Validate organization code
+   * @route   POST /api/organizations/validate-code
+   * @access  Public
+   */
+  validateCode = async (req, res, next) => {
+    try {
+      const { organizationCode } = req.body;
+      const result = await organizationValidationService.validateOrganizationCode(organizationCode);
+      res.status(200).json({
+        success: true,
+        data: result,
       });
     } catch (error) {
       next(error);

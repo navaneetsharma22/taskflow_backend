@@ -8,6 +8,20 @@ const OrganizationSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Name cannot exceed 100 characters"],
     },
+    code: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SuperAdmin",
+    },
     subscription: {
       plan: {
         type: String,
@@ -16,14 +30,24 @@ const OrganizationSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["active", "trialing", "past_due", "canceled"],
-        default: "trialing",
+        enum: ["active", "trialing", "past_due", "canceled", "suspended"],
+        default: "active",
+      },
+    },
+    branding: {
+      logoUrl: {
+        type: String,
+        default: null,
+      },
+      primaryColor: {
+        type: String,
+        default: "#4F46E5",
       },
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Organization must have an owner"],
+      required: false,
     },
     slug: {
       type: String,
