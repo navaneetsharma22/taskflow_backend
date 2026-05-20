@@ -8,6 +8,7 @@ const { protect, authorize } = require("../middleware/auth/authMiddleware");
 // 1. Organization Create (Public SaaS registration)
 // POST /api/organization
 router.post("/", organizationController.createOrganization);
+router.post("/validate-code", organizationController.validateCode);
 
 // Private routes require tenant context and authentication
 router.use(resolveTenant);
