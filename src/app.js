@@ -62,6 +62,9 @@ app.use("/api/projects", require("./routes/project/projectRoutes"));
 app.use("/api/analytics", require("./routes/analytics/analyticsRoutes"));
 app.use("/api/ai", require("./routes/ai/aiRoutes"));
 app.use("/api/automations", require("./routes/automation/automationRoutes"));
+app.use("/api/organization", require("./routes/organization.routes"));
+app.use("/api/organizations", require("./routes/organization.routes"));
+app.use("/api/users", require("./routes/user.routes"));
 
 // Central Error Handler
 app.use(errorHandler);
