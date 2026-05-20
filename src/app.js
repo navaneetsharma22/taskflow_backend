@@ -44,6 +44,8 @@ app.get("/", (req, res) => {
 
 // Mount Routes
 app.use("/api/auth", require("./routes/auth/authRoutes"));
+app.use("/api/tasks", require("./routes/task/taskRoutes"));
+app.use("/api/projects", require("./routes/project/projectRoutes"));
 
 // Central Error Handler
 app.use(errorHandler);

@@ -7,14 +7,20 @@ const TaskSchema = new mongoose.Schema(
       type: String,
       required: [true, "Task title is required"],
       trim: true,
+      maxlength: [200, "Title cannot exceed 200 characters"],
     },
     description: {
       type: String,
       trim: true,
     },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high", "critical"],
+      default: "medium",
+    },
     status: {
       type: String,
-      enum: ["todo", "in_progress", "completed"],
+      enum: ["backlog", "todo", "in_progress", "completed"],
       default: "todo",
     },
     dueDate: {
@@ -23,10 +29,12 @@ const TaskSchema = new mongoose.Schema(
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      default: null,
     },
-    project: {
+    projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
+      default: null,
     },
   },
   {

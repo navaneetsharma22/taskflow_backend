@@ -3,10 +3,11 @@ const tenantPlugin = require("../utils/tenantPlugin");
 
 const ProjectSchema = new mongoose.Schema(
   {
-    name: {
+    title: {
       type: String,
-      required: [true, "Project name is required"],
+      required: [true, "Project title is required"],
       trim: true,
+      maxlength: [200, "Title cannot exceed 200 characters"],
     },
     description: {
       type: String,
@@ -17,6 +18,12 @@ const ProjectSchema = new mongoose.Schema(
       enum: ["planning", "active", "completed", "on_hold"],
       default: "planning",
     },
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,
