@@ -1,9 +1,9 @@
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
-const xssClean = require("xss-clean");
 const { apiLimiter } = require("./middleware/rateLimiter");
 const compression = require("compression");
 const errorHandler = require("./middleware/error");
@@ -16,19 +16,37 @@ app.use(compression());
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || false, // SEC-1: Reject if CLIENT_URL is undefined instead of wildcard
     credentials: true,
   }),
 );
 
-app.use(express.json());
+// Request Correlation ID (ARCH-3)
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  res.setHeader("X-Request-ID", req.id);
+  next();
+});
+
+// Body Parsing with size limits (HIGH-1)
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 app.use(cookieParser());
 
+// Input Sanitization
 app.use(mongoSanitize());
-app.use(xssClean());
 
 // Rate Limiting
 app.use(apiLimiter);
+
+// Health Check Endpoint (Production Readiness)
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Test Route
 app.get("/", (req, res) => {
@@ -49,5 +67,3 @@ app.use("/api/automations", require("./routes/automation/automationRoutes"));
 app.use(errorHandler);
 
 module.exports = app;
-
-

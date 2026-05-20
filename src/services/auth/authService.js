@@ -1,5 +1,7 @@
 const User = require("../../models/User");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const UserSession = require("../../models/UserSession");
 
 class AuthService {
   /**
@@ -14,12 +16,12 @@ class AuthService {
       throw error;
     }
 
-    // Create the user (organizationId is automatically set from context by our Mongoose plugin)
+    // HIGH-5: Force employee role on public registration — admin/manager must be assigned separately
     const user = await User.create({
       name,
       email,
       password,
-      role: role || "employee",
+      role: "employee",
     });
 
     // Generate tokens
@@ -67,6 +69,7 @@ class AuthService {
 
   /**
    * Refresh the access token using a valid refresh token
+   * CRIT-7: Validates token against session store to honor revocations
    */
   async refreshAccessToken({ refreshToken }) {
     if (!refreshToken) {
@@ -76,10 +79,19 @@ class AuthService {
     }
 
     try {
-      // Verify refresh token
+      // Verify refresh token signature
       const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-      // Find user (bypassing the Mongoose tenant filter is fine for token refreshes since we have user ID)
+      // CRIT-7: Validate the token against the session store
+      const hashedToken = crypto.createHash("sha256").update(refreshToken).digest("hex");
+      const activeSession = await UserSession.findOne({ token: hashedToken });
+      if (!activeSession) {
+        const error = new Error("Session has been revoked. Please log in again.");
+        error.statusCode = 401;
+        throw error;
+      }
+
+      // Find user
       const user = await User.findById(decoded.id);
       if (!user) {
         const error = new Error("Session invalid. User not found.");
@@ -99,6 +111,8 @@ class AuthService {
 
       return { user, accessToken: newAccessToken, refreshToken: newRefreshToken };
     } catch (err) {
+      // Re-throw if it's our own custom error
+      if (err.statusCode) throw err;
       const error = new Error("Invalid or expired refresh token");
       error.statusCode = 401;
       throw error;

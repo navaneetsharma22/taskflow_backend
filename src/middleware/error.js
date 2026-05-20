@@ -28,6 +28,20 @@ const errorHandler = (err, req, res, next) => {
     error.statusCode = 400;
   }
 
+  // Payload too large (body size limit)
+  if (err.type === "entity.too.large") {
+    const message = "Request payload is too large";
+    error = new Error(message);
+    error.statusCode = 413;
+  }
+
+  // Malformed JSON body
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    const message = "Invalid JSON in request body";
+    error = new Error(message);
+    error.statusCode = 400;
+  }
+
   // JWT Errors
   if (err.name === "JsonWebTokenError") {
     const message = "Invalid token. Please log in again.";

@@ -37,4 +37,7 @@ const NotificationSchema = new mongoose.Schema(
 // Apply multi-tenant isolation plugin
 NotificationSchema.plugin(tenantPlugin);
 
+// Compound index for efficient user notification feed queries (DB-1)
+NotificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Notification", NotificationSchema);

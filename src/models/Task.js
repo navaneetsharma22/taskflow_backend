@@ -12,6 +12,7 @@ const TaskSchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true,
+      maxlength: [5000, "Description cannot exceed 5000 characters"],
     },
     priority: {
       type: String,
@@ -36,6 +37,11 @@ const TaskSchema = new mongoose.Schema(
       ref: "Project",
       default: null,
     },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Task must have a creator"],
+    },
   },
   {
     timestamps: true,
@@ -44,5 +50,11 @@ const TaskSchema = new mongoose.Schema(
 
 // Apply multi-tenant isolation plugin
 TaskSchema.plugin(tenantPlugin);
+
+// Compound indexes for high-performance tenant-scoped queries (PERF-6 / DB-1)
+TaskSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
+TaskSchema.index({ organizationId: 1, assignedTo: 1 });
+TaskSchema.index({ organizationId: 1, projectId: 1 });
+TaskSchema.index({ organizationId: 1, dueDate: 1 });
 
 module.exports = mongoose.model("Task", TaskSchema);

@@ -59,7 +59,16 @@ class AutomationController {
    */
   updateRule = async (req, res, next) => {
     try {
-      const rule = await AutomationRule.findByIdAndUpdate(req.params.id, req.body, {
+      // HIGH-4: Whitelist allowed update fields to prevent mass assignment
+      const allowedFields = {};
+      const whitelist = ["name", "trigger", "conditions", "actions", "isActive"];
+      for (const key of whitelist) {
+        if (req.body[key] !== undefined) {
+          allowedFields[key] = req.body[key];
+        }
+      }
+
+      const rule = await AutomationRule.findByIdAndUpdate(req.params.id, allowedFields, {
         new: true,
         runValidators: true,
       });

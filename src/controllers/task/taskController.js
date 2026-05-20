@@ -8,7 +8,7 @@ class TaskController {
    */
   createTask = async (req, res, next) => {
     try {
-      const task = await taskService.createTask(req.body);
+      const task = await taskService.createTask(req.body, req.user.id);
       res.status(201).json({
         success: true,
         data: task,
@@ -42,7 +42,7 @@ class TaskController {
    */
   updateTask = async (req, res, next) => {
     try {
-      const task = await taskService.updateTask(req.params.id, req.body);
+      const task = await taskService.updateTask(req.params.id, req.body, req.user);
       res.status(200).json({
         success: true,
         data: task,
@@ -59,7 +59,7 @@ class TaskController {
    */
   deleteTask = async (req, res, next) => {
     try {
-      await taskService.deleteTask(req.params.id);
+      await taskService.deleteTask(req.params.id, req.user);
       res.status(200).json({
         success: true,
         message: "Task deleted successfully",
@@ -77,7 +77,7 @@ class TaskController {
   assignTask = async (req, res, next) => {
     try {
       const { userId } = req.body;
-      const task = await taskService.assignTask(req.params.id, userId);
+      const task = await taskService.assignTask(req.params.id, userId, req.user);
       res.status(200).json({
         success: true,
         data: task,
@@ -102,7 +102,7 @@ class TaskController {
         });
       }
 
-      const task = await taskService.changeStatus(req.params.id, status);
+      const task = await taskService.changeStatus(req.params.id, status, req.user);
       res.status(200).json({
         success: true,
         data: task,

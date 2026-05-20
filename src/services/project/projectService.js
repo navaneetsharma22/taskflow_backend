@@ -1,5 +1,6 @@
 const Project = require("../../models/Project");
 const User = require("../../models/User");
+const { escapeRegex } = require("../../utils/sanitize");
 
 class ProjectService {
   /**
@@ -19,8 +20,14 @@ class ProjectService {
       }
     }
 
-    // Create the project (organizationId is automatically set by the tenant plugin)
-    const project = await Project.create(projectData);
+    // HIGH-4: Whitelist allowed fields
+    const project = await Project.create({
+      title: projectData.title,
+      description: projectData.description,
+      status: projectData.status,
+      members: projectData.members,
+    });
+
     return project;
   }
 
@@ -50,32 +57,35 @@ class ProjectService {
     }
 
     if (search) {
+      // HIGH-2: Escape regex special characters to prevent ReDoS
+      const safeSearch = escapeRegex(search);
       queryConditions.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
     // Pagination calculations
     const skipCount = (parseInt(page) - 1) * parseInt(limit);
+    const parsedLimit = Math.min(parseInt(limit) || 10, 100);
 
-    // Run query (multi-tenant filtering is automatically applied)
-    const projectsQuery = Project.find(queryConditions)
-      .populate("members", "name email role")
-      .sort(sort)
-      .skip(skipCount)
-      .limit(parseInt(limit));
-
-    const totalDocs = await Project.countDocuments(queryConditions);
-    const projects = await projectsQuery;
+    // PERF-1: Run count + find in parallel
+    const [totalDocs, projects] = await Promise.all([
+      Project.countDocuments(queryConditions),
+      Project.find(queryConditions)
+        .populate("members", "name email role")
+        .sort(sort)
+        .skip(skipCount)
+        .limit(parsedLimit),
+    ]);
 
     return {
       projects,
       pagination: {
         total: totalDocs,
         page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(totalDocs / parseInt(limit)),
+        limit: parsedLimit,
+        pages: Math.ceil(totalDocs / parsedLimit),
       },
     };
   }
@@ -97,8 +107,17 @@ class ProjectService {
       }
     }
 
+    // HIGH-4: Whitelist allowed update fields
+    const allowedFields = {};
+    const whitelist = ["title", "description", "status", "members"];
+    for (const key of whitelist) {
+      if (updateData[key] !== undefined) {
+        allowedFields[key] = updateData[key];
+      }
+    }
+
     // Update project (automatically scoped to current organization context)
-    const project = await Project.findByIdAndUpdate(projectId, updateData, {
+    const project = await Project.findByIdAndUpdate(projectId, allowedFields, {
       new: true,
       runValidators: true,
     });
