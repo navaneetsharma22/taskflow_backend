@@ -116,6 +116,33 @@ class AutomationEngine {
 
     return { summary: summaryText };
   }
+
+  /**
+   * Orchestrate Daily Agenda planner generation
+   */
+  async getDailyPlan(userId, tasks = []) {
+    const prompt = promptBuilder.buildDailyPlanPrompt(tasks);
+    const rawResult = await gemini.generateContent(prompt);
+
+    let parsedResult;
+    try {
+      const cleanJson = this.cleanJsonString(rawResult);
+      parsedResult = JSON.parse(cleanJson);
+    } catch (error) {
+      console.warn("Failed to parse Gemini daily agenda response as JSON.", error.message);
+      parsedResult = { rawText: rawResult };
+    }
+
+    // Save to AI History
+    await AiHistory.create({
+      userId,
+      featureType: "daily_plan",
+      prompt,
+      response: parsedResult,
+    });
+
+    return parsedResult;
+  }
 }
 
 module.exports = new AutomationEngine();

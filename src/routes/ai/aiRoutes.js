@@ -12,6 +12,7 @@ router.post("/breakdown", aiController.getTaskBreakdown);
 router.post("/priority", aiController.detectPriority);
 router.post("/roadmap", aiController.generateProjectRoadmap);
 router.post("/summary", aiController.getTaskSummary);
+router.post("/daily-plan", aiController.getDailyPlan);
 router.get("/history", aiController.getAiHistory);
 
 module.exports = router;

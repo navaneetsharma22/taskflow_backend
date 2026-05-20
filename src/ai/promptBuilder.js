@@ -104,6 +104,36 @@ ${formattedComments || "No comments posted yet."}
 Return a clean, bulleted executive summary (maximum 3 bullet points, under 150 words total). Do not include JSON or markdown blocks. Just provide standard text.
 `;
   }
+  /**
+   * Build prompt to structure a daily agenda/plan based on active tasks
+   */
+  buildDailyPlanPrompt(tasks = []) {
+    const formattedTasks = tasks
+      .slice(0, 15) // Limit to prevent payload bloat
+      .map((t) => `- [${sanitizePromptInput(t.priority || "medium", 10).toUpperCase()}] "${sanitizePromptInput(t.title, 100)}" - status: ${sanitizePromptInput(t.status || "todo", 15)}`)
+      .join("\n");
+
+    return `
+You are a peak personal productivity coach. Create a structured hourly daily plan/agenda for a professional given the following assigned tasks.
+Assigned Tasks:
+${formattedTasks || "No tasks currently assigned for today."}
+
+Format the day into a highly actionable, hourly schedule starting from 9:00 AM to 5:00 PM. Include breaks and a primary "Focus Milestone" of the day.
+
+Return the result STRICTLY as a raw JSON object. Do not include markdown code block syntax (like \`\`\`json) or any extra conversational text.
+Expected JSON Format:
+{
+  "focusMilestone": "Primary goal for the day",
+  "schedule": [
+    {
+      "time": "9:00 AM - 10:00 AM",
+      "activity": "Focus action item (e.g. Code Review)",
+      "associatedTask": "Task title if applicable or 'General'"
+    }
+  ]
+}
+`;
+  }
 }
 
 module.exports = new PromptBuilder();

@@ -111,6 +111,112 @@ class TaskController {
       next(error);
     }
   };
+  /**
+   * @desc    Get comments for a task
+   * @route   GET /api/tasks/:id/comments
+   * @access  Private
+   */
+  getComments = async (req, res, next) => {
+    try {
+      const comments = await require("../../models/Comment")
+        .find({ taskId: req.params.id })
+        .populate("userId", "name email role")
+        .sort("createdAt");
+      res.status(200).json({
+        success: true,
+        data: comments,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Create a comment on a task
+   * @route   POST /api/tasks/:id/comments
+   * @access  Private
+   */
+  createComment = async (req, res, next) => {
+    try {
+      const { content } = req.body;
+      if (!content || content.trim() === "") {
+        return res.status(400).json({ success: false, error: "Comment content is required" });
+      }
+
+      const task = await require("../../models/Task").findById(req.params.id);
+      if (!task) {
+        return res.status(404).json({ success: false, error: "Task not found" });
+      }
+
+      const comment = await require("../../models/Comment").create({
+        taskId: req.params.id,
+        userId: req.user.id,
+        content,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: comment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Get attachments for a task
+   * @route   GET /api/tasks/:id/attachments
+   * @access  Private
+   */
+  getAttachments = async (req, res, next) => {
+    try {
+      const attachments = await require("../../models/Attachment")
+        .find({ taskId: req.params.id })
+        .populate("userId", "name email role")
+        .sort("-createdAt");
+      res.status(200).json({
+        success: true,
+        data: attachments,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Create an attachment on a task
+   * @route   POST /api/tasks/:id/attachments
+   * @access  Private
+   */
+  createAttachment = async (req, res, next) => {
+    try {
+      const { fileName, fileUrl, fileType, fileSize } = req.body;
+      if (!fileName || !fileUrl) {
+        return res.status(400).json({ success: false, error: "fileName and fileUrl are required" });
+      }
+
+      const task = await require("../../models/Task").findById(req.params.id);
+      if (!task) {
+        return res.status(404).json({ success: false, error: "Task not found" });
+      }
+
+      const attachment = await require("../../models/Attachment").create({
+        taskId: req.params.id,
+        userId: req.user.id,
+        fileName,
+        fileUrl,
+        fileType,
+        fileSize,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: attachment,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new TaskController();

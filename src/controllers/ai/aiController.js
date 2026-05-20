@@ -112,6 +112,25 @@ class AiController {
       next(error);
     }
   };
+
+  /**
+   * @desc    Suggest daily hourly planning schedule
+   * @route   POST /api/ai/daily-plan
+   * @access  Private
+   */
+  getDailyPlan = async (req, res, next) => {
+    try {
+      const tasks = await Task.find({
+        assignedTo: req.user.id,
+        status: { $ne: "completed" },
+      }).limit(15);
+
+      const dailyPlan = await automationEngine.getDailyPlan(req.user.id, tasks);
+      res.status(200).json({ success: true, data: dailyPlan });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new AiController();
