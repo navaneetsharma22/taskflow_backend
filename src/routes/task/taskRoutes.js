@@ -27,4 +27,13 @@ router
 router.put("/:id/assign", validateAssignTask, taskController.assignTask);
 router.put("/:id/status", validateChangeStatus, taskController.changeStatus);
 
+// Comments and Attachments sub-routes
+router.route("/:id/comments")
+  .get(taskController.getComments)
+  .post(taskController.createComment);
+
+router.route("/:id/attachments")
+  .get(taskController.getAttachments)
+  .post(taskController.createAttachment);
+
 module.exports = router;

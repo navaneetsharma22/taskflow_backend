@@ -85,11 +85,25 @@ class AnalyticsService {
     const completedTasks = statusMap.completed;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+    // Calculate overdue tasks count (scoped automatically by tenant context)
+    const overdueTasksCount = await Task.countDocuments({
+      dueDate: { $lt: new Date() },
+      status: { $ne: "completed" },
+    });
+
+    // Calculate Productivity Score (Completion rate penalized by the ratio of overdue tasks)
+    const overdueRatio = totalTasks > 0 ? overdueTasksCount / totalTasks : 0;
+    const productivityScore = totalTasks > 0
+      ? Math.max(0, Math.round(completionRate * (1 - overdueRatio)))
+      : 100; // 100 default baseline when no tasks exist
+
     return {
       summary: {
         totalTasks,
         completedTasks,
         completionRate,
+        overdueTasks: overdueTasksCount,
+        productivityScore,
         totalProjects,
       },
       tasksByStatus: statusMap,

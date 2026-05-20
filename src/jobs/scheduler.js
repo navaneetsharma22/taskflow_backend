@@ -53,6 +53,11 @@ const evaluateDueCheckRules = async () => {
               $gt: new Date(),
               $lte: timeLimit,
             };
+          } else if (cond.operator === "overdue") {
+            // Already overdue
+            taskQuery.dueDate = {
+              $lt: new Date(),
+            };
           }
         } else if (cond.field === "status") {
           if (cond.operator === "not_equals") {
@@ -74,20 +79,38 @@ const evaluateDueCheckRules = async () => {
 
       // Process actions wrapped in the tenant's execution context
       await runInContext(rule.organizationId.toString(), async () => {
+        const User = require("../models/User");
+        
+        // Find organization managers or owner for manager alerts
+        let managerUser = null;
+        try {
+          managerUser = await User.findOne({
+            organizationId: rule.organizationId,
+            role: { $in: ["manager", "admin"] },
+          });
+        } catch (err) {
+          console.warn("Failed to find a manager to notify", err.message);
+        }
+
         for (const task of matchingTasks) {
-          // If task doesn't have an assignee, notify the task project members or organization owner (fallback)
-          const targetUserId = task.assignedTo ? task.assignedTo.toString() : null;
-
-          if (!targetUserId) continue;
-
           for (const action of rule.actions) {
+            // Resolve target user dynamically
+            let targetUserId = null;
+            if (action.target === "manager" || action.target === "admin") {
+              targetUserId = managerUser ? managerUser._id.toString() : (task.createdBy ? task.createdBy.toString() : null);
+            } else {
+              targetUserId = task.assignedTo ? task.assignedTo.toString() : (task.createdBy ? task.createdBy.toString() : null);
+            }
+
+            if (!targetUserId) continue;
+
             if (action.type === "send_notification") {
               const notificationMessage = compileMessage(action.message, task);
               
               // 1. Save Notification to DB
               const notification = await Notification.create({
                 userId: targetUserId,
-                title: "Automation Trigger: Task Attention Required",
+                title: action.target === "manager" ? "Automation Trigger: Overdue Task Alert" : "Automation Trigger: Task Attention Required",
                 message: notificationMessage,
                 type: "task_due_check",
                 data: { taskId: task._id },
@@ -101,21 +124,20 @@ const evaluateDueCheckRules = async () => {
                 data: notification,
               });
 
-              console.log(`Scheduler: Dispatched notification to user ${targetUserId} for task ${task.title}`);
+              console.log(`Scheduler: Dispatched notification to target ${action.target || "assignee"} (${targetUserId}) for task ${task.title}`);
             }
 
             if (action.type === "create_ai_risk_alert") {
               console.log(`Scheduler: Invoking AI risk assessment for task: ${task.title}`);
               
-              // 1. Build prompt for Gemini to detect and suggest task mitigation
               const aiPrompt = `
-You are a senior risk auditor and productivity specialist. The following task is approaching its deadline soon and is still incomplete.
+You are a senior risk auditor and productivity specialist. The following task is overdue or approaching its deadline soon and is still incomplete.
 Task Title: "${task.title}"
 Task Details: "${task.description || "No description provided."}"
 Task Current Status: "${task.status}"
 Due Date: "${task.dueDate}"
 
-Compile a quick AI Risk Assessment. List the top potential risk (under 15 words) and 2 specific action steps the assignee can take immediately to complete it (under 30 words total).
+Compile a quick AI Risk Assessment. List the top potential risk (under 15 words) and 2 specific action steps the team can take immediately to resolve this delay (under 30 words total).
 Be direct, professional, and action-oriented. Keep the output extremely brief.
 `;
 
@@ -140,7 +162,7 @@ Be direct, professional, and action-oriented. Keep the output extremely brief.
                   data: notification,
                 });
 
-                console.log(`Scheduler: Successfully dispatched AI risk alert for task ${task.title}`);
+                console.log(`Scheduler: Successfully dispatched AI risk alert to target ${action.target || "assignee"} for task ${task.title}`);
               } catch (aiError) {
                 console.error(`Scheduler: AI Risk assessment failed for task ${task._id}:`, aiError.message);
               }
