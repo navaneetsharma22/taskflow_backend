@@ -16,6 +16,11 @@ const server = app.listen(PORT, () => {
 // Initialize real-time Socket.IO server
 initSocket(server);
 
+const { initScheduler } = require("./jobs/scheduler");
+
+// Initialize and start automation scheduler
+initScheduler();
+
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
   console.log(`Error: ${err.message}`);
