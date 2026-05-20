@@ -47,4 +47,15 @@ module.exports = function tenantPlugin(schema, options) {
     }
     next();
   });
+
+  // Pre-aggregate hook to automatically scope analytical pipelines
+  schema.pre("aggregate", function (next) {
+    const orgId = getOrganizationId();
+    if (orgId) {
+      this.pipeline().unshift({
+        $match: { organizationId: new mongoose.Types.ObjectId(orgId) },
+      });
+    }
+    next();
+  });
 };

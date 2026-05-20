@@ -4,7 +4,7 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
 const xssClean = require("xss-clean");
-const rateLimit = require("express-rate-limit");
+const { apiLimiter } = require("./middleware/rateLimiter");
 const compression = require("compression");
 const errorHandler = require("./middleware/error");
 
@@ -28,12 +28,7 @@ app.use(mongoSanitize());
 app.use(xssClean());
 
 // Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-});
-
-app.use(limiter);
+app.use(apiLimiter);
 
 // Test Route
 app.get("/", (req, res) => {
@@ -46,6 +41,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", require("./routes/auth/authRoutes"));
 app.use("/api/tasks", require("./routes/task/taskRoutes"));
 app.use("/api/projects", require("./routes/project/projectRoutes"));
+app.use("/api/analytics", require("./routes/analytics/analyticsRoutes"));
 
 // Central Error Handler
 app.use(errorHandler);

@@ -2,6 +2,7 @@ const Task = require("../../models/Task");
 const User = require("../../models/User");
 const Project = require("../../models/Project");
 const { broadcastToOrg, emitToUser } = require("../../sockets/socketServer");
+const webhookService = require("../webhookService");
 
 class TaskService {
   /**
@@ -33,6 +34,9 @@ class TaskService {
 
     // Real-time Event: Broadcast task creation inside organization room
     broadcastToOrg(task.organizationId, "task_created", task);
+
+    // Webhook Trigger: Notify organization's webhooks
+    webhookService.trigger(task.organizationId, "task.created", task);
 
     // Real-time Event: Send a live notification specifically to the assigned user
     if (task.assignedTo) {
@@ -152,6 +156,9 @@ class TaskService {
     // Real-time Event: Broadcast task update inside organization room
     broadcastToOrg(task.organizationId, "task_updated", task);
 
+    // Webhook Trigger: Notify organization's webhooks
+    webhookService.trigger(task.organizationId, "task.updated", task);
+
     // Real-time Event: Send a live notification specifically to the new assignee if changed
     if (updateData.assignedTo) {
       emitToUser(task.organizationId, updateData.assignedTo, "live_notification", {
@@ -178,6 +185,9 @@ class TaskService {
 
     // Real-time Event: Broadcast task deletion inside organization room
     broadcastToOrg(task.organizationId, "task_deleted", { taskId });
+
+    // Webhook Trigger: Notify organization's webhooks
+    webhookService.trigger(task.organizationId, "task.deleted", { taskId });
 
     return task;
   }

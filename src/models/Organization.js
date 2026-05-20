@@ -38,7 +38,4 @@ const OrganizationSchema = new mongoose.Schema(
   }
 );
 
-// Index slug for resolution
-OrganizationSchema.index({ slug: 1 });
-
 module.exports = mongoose.model("Organization", OrganizationSchema);

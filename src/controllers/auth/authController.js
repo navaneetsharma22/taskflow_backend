@@ -1,4 +1,10 @@
 const authService = require("../../services/auth/authService");
+const UserSession = require("../../models/UserSession");
+const {
+  createUserSession,
+  revokeUserSession,
+  listActiveSessions,
+} = require("../../utils/sessionHelper");
 
 /**
  * Helper function to send token response and set HttpOnly cookie
@@ -54,6 +60,9 @@ class AuthController {
         role,
       });
 
+      // Track session and device information
+      await createUserSession(user._id, refreshToken, req.ip, req.headers["user-agent"]);
+
       sendTokenResponse(user, accessToken, refreshToken, 201, res);
     } catch (error) {
       next(error);
@@ -82,6 +91,9 @@ class AuthController {
         password,
       });
 
+      // Track session and device information
+      await createUserSession(user._id, refreshToken, req.ip, req.headers["user-agent"]);
+
       sendTokenResponse(user, accessToken, refreshToken, 200, res);
     } catch (error) {
       next(error);
@@ -95,6 +107,13 @@ class AuthController {
    */
   logout = async (req, res, next) => {
     try {
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      
+      // Revoke the database session
+      if (refreshToken) {
+        await revokeUserSession(refreshToken);
+      }
+
       res.cookie("refreshToken", "", {
         httpOnly: true,
         expires: new Date(0), // expire immediately
@@ -131,7 +150,59 @@ class AuthController {
       const { user, accessToken, refreshToken: newRefreshToken } =
         await authService.refreshAccessToken({ refreshToken });
 
+      // Revoke old session and register new session due to refresh token rotation
+      await revokeUserSession(refreshToken);
+      await createUserSession(user._id, newRefreshToken, req.ip, req.headers["user-agent"]);
+
       sendTokenResponse(user, accessToken, newRefreshToken, 200, res);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Get all active sessions for the current user (device tracking)
+   * @route   GET /api/auth/sessions
+   * @access  Private
+   */
+  getSessions = async (req, res, next) => {
+    try {
+      const sessions = await listActiveSessions(req.user.id);
+      res.status(200).json({
+        success: true,
+        data: sessions,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * @desc    Revoke specific user session (remote logout)
+   * @route   DELETE /api/auth/sessions/:id
+   * @access  Private
+   */
+  revokeSession = async (req, res, next) => {
+    try {
+      const sessionId = req.params.id;
+      
+      // Delete session ensuring ownership check
+      const result = await UserSession.deleteOne({
+        _id: sessionId,
+        userId: req.user.id,
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Session not found or unauthorized",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Session successfully revoked",
+      });
     } catch (error) {
       next(error);
     }
