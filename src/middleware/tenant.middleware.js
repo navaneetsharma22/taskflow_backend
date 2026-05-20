@@ -21,11 +21,6 @@ const resolveTenant = async (req, res, next) => {
       }
     }
 
-    // Secondary Fallback: Check request body/query for convenience
-    if (!orgIdentifier) {
-      orgIdentifier = req.body.organizationId || req.query.organizationId;
-    }
-
     if (!orgIdentifier) {
       return res.status(400).json({
         success: false,

@@ -33,4 +33,7 @@ const ProjectSchema = new mongoose.Schema(
 // Apply multi-tenant isolation plugin
 ProjectSchema.plugin(tenantPlugin);
 
+// Compound indexes for tenant-scoped queries (DB-1)
+ProjectSchema.index({ organizationId: 1, status: 1 });
+
 module.exports = mongoose.model("Project", ProjectSchema);

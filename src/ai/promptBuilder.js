@@ -1,15 +1,21 @@
+const { sanitizePromptInput } = require("../utils/sanitize");
+
 /**
  * Generates highly structured, targeted prompt instructions for Gemini AI
+ * All user inputs are sanitized to prevent prompt injection attacks
  */
 class PromptBuilder {
   /**
    * Build prompt to break down a task into a set of distinct subtasks
    */
   buildTaskBreakdownPrompt(title, description) {
+    const safeTitle = sanitizePromptInput(title, 200);
+    const safeDesc = sanitizePromptInput(description, 2000);
+
     return `
 You are an expert project management assistant. Break down the following complex task into 3 to 6 logical, actionable subtasks or steps.
-Task Title: "${title}"
-Task Description: "${description || "No description provided."}"
+Task Title: "${safeTitle}"
+Task Description: "${safeDesc || "No description provided."}"
 
 Return the result STRICTLY as a raw JSON object. Do not include markdown code block syntax (like \`\`\`json) or any extra conversational text.
 Expected JSON Format:
@@ -28,10 +34,13 @@ Expected JSON Format:
    * Build prompt to analyze title and description and suggest a task priority
    */
   buildPriorityDetectionPrompt(title, description) {
+    const safeTitle = sanitizePromptInput(title, 200);
+    const safeDesc = sanitizePromptInput(description, 2000);
+
     return `
 You are an expert triage and risk assessment system. Analyze the task title and description to detect its appropriate priority level.
-Task Title: "${title}"
-Task Description: "${description || "No description provided."}"
+Task Title: "${safeTitle}"
+Task Description: "${safeDesc || "No description provided."}"
 
 Allowed priority levels: "low", "medium", "high", "critical"
 
@@ -48,10 +57,13 @@ Expected JSON Format:
    * Build prompt to generate a project roadmap (milestones & phases)
    */
   buildProjectRoadmapPrompt(title, description) {
+    const safeTitle = sanitizePromptInput(title, 200);
+    const safeDesc = sanitizePromptInput(description, 2000);
+
     return `
 You are a senior technical program manager. Create a high-level roadmap with 3 distinct project phases/milestones for the following project.
-Project Title: "${title}"
-Project Description: "${description || "No description provided."}"
+Project Title: "${safeTitle}"
+Project Description: "${safeDesc || "No description provided."}"
 
 Return the result STRICTLY as a raw JSON object. Do not include markdown code block syntax (like \`\`\`json) or any extra conversational text.
 Expected JSON Format:
@@ -74,14 +86,18 @@ Expected JSON Format:
    * Build prompt to summarize long task details or discussion threads
    */
   buildTaskSummaryPrompt(taskTitle, taskDescription, comments = []) {
+    const safeTitle = sanitizePromptInput(taskTitle, 200);
+    const safeDesc = sanitizePromptInput(taskDescription, 2000);
+
     const formattedComments = comments
-      .map((c) => `- User (${c.userId?.name || "Member"}): "${c.content}"`)
+      .slice(0, 20) // Limit to 20 comments to prevent payload bloat
+      .map((c) => `- ${sanitizePromptInput(c.userId?.name || "Member", 50)}: "${sanitizePromptInput(c.content, 300)}"`)
       .join("\n");
 
     return `
 You are a senior technical writer. Create a concise, professional executive summary of the following task and its discussion comments.
-Task Title: "${taskTitle}"
-Task Description: "${taskDescription || "No description provided."}"
+Task Title: "${safeTitle}"
+Task Description: "${safeDesc || "No description provided."}"
 Task Discussion Comments:
 ${formattedComments || "No comments posted yet."}
 
