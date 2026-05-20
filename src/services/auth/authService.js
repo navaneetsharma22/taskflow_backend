@@ -3,20 +3,19 @@ const jwt = require("jsonwebtoken");
 
 class AuthService {
   /**
-   * Register a new user in a specific tenant
+   * Register a new user inside the active organization context
    */
-  async registerUser({ tenantId, name, email, password, role }) {
-    // Check if user already exists in this tenant
-    const existingUser = await User.findOne({ tenantId, email });
+  async registerUser({ organizationId, name, email, password, role }) {
+    // Check if user already exists inside this organization
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      const error = new Error("Email is already registered for this tenant");
+      const error = new Error("Email is already registered for this organization");
       error.statusCode = 400;
       throw error;
     }
 
-    // Create the user
+    // Create the user (organizationId is automatically set from context by our Mongoose plugin)
     const user = await User.create({
-      tenantId,
       name,
       email,
       password,
@@ -31,11 +30,11 @@ class AuthService {
   }
 
   /**
-   * Login user in a specific tenant
+   * Login user inside the active organization context
    */
-  async loginUser({ tenantId, email, password }) {
-    // Find user and explicitly select password field
-    const user = await User.findOne({ tenantId, email }).select("+password");
+  async loginUser({ email, password }) {
+    // Find user inside the active organization (automatically filtered by our Mongoose plugin!)
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       const error = new Error("Invalid credentials");
       error.statusCode = 401;
@@ -80,7 +79,7 @@ class AuthService {
       // Verify refresh token
       const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-      // Find user
+      // Find user (bypassing the Mongoose tenant filter is fine for token refreshes since we have user ID)
       const user = await User.findById(decoded.id);
       if (!user) {
         const error = new Error("Session invalid. User not found.");

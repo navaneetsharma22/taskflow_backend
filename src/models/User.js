@@ -1,14 +1,10 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const tenantPlugin = require("../utils/tenantPlugin");
 
 const UserSchema = new mongoose.Schema(
   {
-    tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Tenant",
-      required: [true, "User must belong to a tenant"],
-    },
     name: {
       type: String,
       required: [true, "Please add a name"],
@@ -63,7 +59,7 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
 // Sign JWT and return (15 minutes expiration)
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
-    { id: this._id, tenantId: this.tenantId, role: this.role },
+    { id: this._id, organizationId: this.organizationId, role: this.role },
     process.env.JWT_SECRET,
     { expiresIn: "15m" }
   );
@@ -72,13 +68,16 @@ UserSchema.methods.getSignedJwtToken = function () {
 // Sign Refresh JWT and return (7 days expiration)
 UserSchema.methods.getSignedRefreshJwtToken = function () {
   return jwt.sign(
-    { id: this._id, tenantId: this.tenantId },
+    { id: this._id, organizationId: this.organizationId },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: "7d" }
   );
 };
 
-// Ensure uniqueness of email within each tenant
-UserSchema.index({ tenantId: 1, email: 1 }, { unique: true });
+// Apply multi-tenant isolation plugin
+UserSchema.plugin(tenantPlugin);
+
+// Ensure uniqueness of email within each organization
+UserSchema.index({ organizationId: 1, email: 1 }, { unique: true });
 
 module.exports = mongoose.model("User", UserSchema);

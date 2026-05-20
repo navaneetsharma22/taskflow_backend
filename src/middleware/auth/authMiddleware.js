@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
-// Protect routes - Verify Token & Tenant alignment
+// Protect routes - Verify Token & Organization context alignment
 const protect = async (req, res, next) => {
   let token;
 
@@ -44,8 +44,8 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // CRITICAL: Ensure the authenticated user matches the resolved tenant of the request!
-    if (req.tenantId && user.tenantId.toString() !== req.tenantId) {
+    // CRITICAL: Ensure the authenticated user belongs to the active organization context!
+    if (req.organizationId && user.organizationId.toString() !== req.organizationId) {
       return res.status(403).json({
         success: false,
         error: "Access denied. Cross-tenant access is prohibited.",

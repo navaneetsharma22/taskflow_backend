@@ -23,31 +23,31 @@ const sendTokenResponse = (user, accessToken, refreshToken, statusCode, res) => 
         name: user.name,
         email: user.email,
         role: user.role,
-        tenantId: user.tenantId,
+        organizationId: user.organizationId,
       },
     });
 };
 
 class AuthController {
   /**
-   * @desc    Register a new user inside the active tenant
+   * @desc    Register a new user inside the active organization context
    * @route   POST /api/auth/register
-   * @access  Public (scoped to active tenant)
+   * @access  Public (scoped to active organization context)
    */
   register = async (req, res, next) => {
     try {
       const { name, email, password, role } = req.body;
-      const tenantId = req.tenantId || req.body.tenantId;
+      const organizationId = req.organizationId;
 
-      if (!tenantId) {
+      if (!organizationId) {
         return res.status(400).json({
           success: false,
-          error: "Tenant identification is required to register",
+          error: "Organization identification is required to register",
         });
       }
 
       const { user, accessToken, refreshToken } = await authService.registerUser({
-        tenantId,
+        organizationId,
         name,
         email,
         password,
@@ -61,24 +61,23 @@ class AuthController {
   };
 
   /**
-   * @desc    Login user inside the active tenant
+   * @desc    Login user inside the active organization context
    * @route   POST /api/auth/login
-   * @access  Public (scoped to active tenant)
+   * @access  Public (scoped to active organization context)
    */
   login = async (req, res, next) => {
     try {
       const { email, password } = req.body;
-      const tenantId = req.tenantId || req.body.tenantId;
+      const organizationId = req.organizationId;
 
-      if (!tenantId) {
+      if (!organizationId) {
         return res.status(400).json({
           success: false,
-          error: "Tenant identification is required to login",
+          error: "Organization identification is required to login",
         });
       }
 
       const { user, accessToken, refreshToken } = await authService.loginUser({
-        tenantId,
         email,
         password,
       });
