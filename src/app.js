@@ -5,11 +5,14 @@ const cookieParser = require("cookie-parser");
 const mongoSanitize = require("express-mongo-sanitize");
 const xssClean = require("xss-clean");
 const rateLimit = require("express-rate-limit");
+const compression = require("compression");
+const errorHandler = require("./middleware/error");
 
 const app = express();
 
-// Security Middleware
+// Security & Optimization Middleware
 app.use(helmet());
+app.use(compression());
 
 app.use(
   cors({
@@ -39,4 +42,9 @@ app.get("/", (req, res) => {
   });
 });
 
+// Central Error Handler
+app.use(errorHandler);
+
 module.exports = app;
+
+
